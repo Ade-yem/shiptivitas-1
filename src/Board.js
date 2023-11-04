@@ -1,5 +1,5 @@
 import React from 'react';
-import Dragula from 'dragula';
+import dragula from 'dragula';
 import 'dragula/dist/dragula.css';
 import Swimlane from './Swimlane';
 import './Board.css';
@@ -55,6 +55,36 @@ export default class Board extends React.Component {
       <Swimlane name={name} clients={clients} dragulaRef={ref}/>
     );
   }
+  componentDidMount(){
+    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
+    this.drake = dragula(containers)
+    this.drake.on('drop', function (el, target, source, sibling) {
+      let class_name;
+      if (el.dataset.status === 'backlog') {
+        class_name ='Card-grey';
+      } else if (el.dataset.status === 'in-progress') {
+        class_name = 'Card-blue';
+      } else if (el.dataset.status === 'complete') {
+        class_name = 'Card-green';
+      }
+      if (el.dataset.status !== sibling.dataset.status) {
+        el.dataset.status = sibling.dataset.status;
+        const status = sibling.dataset.status;
+        if (status === 'backlog') {
+          el.className = el.className.replace(class_name, 'Card-grey');
+        } else if (status === 'in-progress') {
+          el.className = el.className.replace(class_name, 'Card-blue');
+        } else if (status === 'complete') {
+          el.className = el.className.replace(class_name, 'Card-green');
+        }
+      }
+    })
+    console.log(this.state.clients)
+
+  }
+  componentDidUpdate(){
+    dragula(Array.from(document.getElementsByClassName('Swimlane-dragColumn')))
+    }
 
   render() {
     return (
