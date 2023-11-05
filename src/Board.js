@@ -55,36 +55,45 @@ export default class Board extends React.Component {
       <Swimlane name={name} clients={clients} dragulaRef={ref}/>
     );
   }
-  componentDidMount(){
-    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
-    this.drake = dragula(containers)
-    this.drake.on('drop', function (el, target, source, sibling) {
-      let class_name;
-      if (el.dataset.status === 'backlog') {
-        class_name ='Card-grey';
-      } else if (el.dataset.status === 'in-progress') {
-        class_name = 'Card-blue';
-      } else if (el.dataset.status === 'complete') {
-        class_name = 'Card-green';
-      }
-      if (el.dataset.status !== sibling.dataset.status) {
-        el.dataset.status = sibling.dataset.status;
-        const status = sibling.dataset.status;
-        if (status === 'backlog') {
-          el.className = el.className.replace(class_name, 'Card-grey');
-        } else if (status === 'in-progress') {
-          el.className = el.className.replace(class_name, 'Card-blue');
-        } else if (status === 'complete') {
-          el.className = el.className.replace(class_name, 'Card-green');
-        }
+  updateStates(el, target, source, sibling) {
+    this.drake.cancel()
+    // get the new status
+    let tag = target === this.swimlanes.inProgress.current
+     ? "in-progress" 
+     : target === this.swimlanes.complete.current 
+     ? "complete" : "backlog";
+    // find the moved card
+    let list = [...this.state.clients.backlog, ...this.state.clients.inProgress, ...this.state.clients.complete ]
+    const moved = list.find(card => card.id === el.dataset.id)
+    moved.status = tag
+    // remove the moved card
+    list = list.filter(val => val.id !== moved.id);
+    // find the card sibling index
+    const sibIndex = sibling && list.findIndex(card => card.id === sibling.dataset.id);
+    let index = sibIndex === -1 ? list.length : sibIndex;
+    // add the card above the sibling
+    list.splice(index, 0, moved);
+    this.setState({
+      clients: {
+        backlog: list.filter(client => !client.status || client.status === 'backlog'),
+        inProgress: list.filter(client => client.status && client.status === 'in-progress'),
+        complete: list.filter(client => client.status && client.status === 'complete'),
       }
     })
-    console.log(this.state.clients)
+    
+  }
+  componentDidMount(){
+    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
+    this.drake = dragula(containers, {
+      revertOnSpill: true
+    })
+    this.drake.on('drop', (el, target, source, sibling) => this.updateStates(el, target, source, sibling) )
 
   }
-  componentDidUpdate(){
-    dragula(Array.from(document.getElementsByClassName('Swimlane-dragColumn')))
-    }
+  componentWillUnmount () {
+    this.drake.destroy()
+  }
+  
 
   render() {
     return (

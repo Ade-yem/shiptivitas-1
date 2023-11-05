@@ -1,0 +1,18 @@
+In the componentDidMount method, the code initializes dragula. The containers represent swimlane refs in the application.
+
+componentDidMount() {
+  const containers = [
+    this.swimlanes.backlog.current,
+    this.swimlanes.inProgress.current,
+    this.swimlanes.complete.current
+  ];
+
+  this.drake = dragula(containers);
+
+  this.drake.on('drop', (el, target, source, sibling) => this.updateStates(el, target, source, sibling));
+}
+The on('drop') event is triggered when an item is dropped into a different swimlane.
+the updateStates function handles the drop event and also updates the state
+In the updateStates function, I canceled the dragula event to avoid error with "this.drake.cancel()", then I checked for the target container and used it to change the status of the moved card.
+After that, I removed the moved card from the card list and added it to the list based on the index of its new sibling.
+Then, I updated the state.
