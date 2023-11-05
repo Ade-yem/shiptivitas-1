@@ -1,5 +1,83 @@
+diff --git a/exp.txt b/exp.txt
+deleted file mode 100644
+index 5d885a6..0000000
+--- a/exp.txt
++++ /dev/null
+@@ -1,18 +0,0 @@
+-In the componentDidMount method, the code initializes dragula. The containers represent swimlane refs in the application.
+-
+-componentDidMount() {
+-  const containers = [
+-    this.swimlanes.backlog.current,
+-    this.swimlanes.inProgress.current,
+-    this.swimlanes.complete.current
+-  ];
+-
+-  this.drake = dragula(containers);
+-
+-  this.drake.on('drop', (el, target, source, sibling) => this.updateStates(el, target, source, sibling));
+-}
+-The on('drop') event is triggered when an item is dropped into a different swimlane.
+-the updateStates function handles the drop event and also updates the state
+-In the updateStates function, I canceled the dragula event to avoid error with "this.drake.cancel()", then I checked for the target container and used it to change the status of the moved card.
+-After that, I removed the moved card from the card list and added it to the list based on the index of its new sibling.
+-Then, I updated the state.
+diff --git a/shipvita.patch b/shipvita.patch
+deleted file mode 100644
+index c3d83b5..0000000
+--- a/shipvita.patch
++++ /dev/null
+@@ -1,48 +0,0 @@
+-diff --git a/src/Board.js b/src/Board.js
+-index 7cb5d7b..1f00045 100644
+---- a/src/Board.js
+-+++ b/src/Board.js
+-@@ -1,5 +1,5 @@
+- import React from 'react';
+--import dragula from 'dragula';
+-+import Dragula from 'dragula';
+- import 'dragula/dist/dragula.css';
+- import Swimlane from './Swimlane';
+- import './Board.css';
+-@@ -55,36 +55,6 @@ export default class Board extends React.Component {
+-       <Swimlane name={name} clients={clients} dragulaRef={ref}/>
+-     );
+-   }
+--  componentDidMount(){
+--    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
+--    this.drake = dragula(containers)
+--    this.drake.on('drop', function (el, target, source, sibling) {
+--      let class_name;
+--      if (el.dataset.status === 'backlog') {
+--        class_name ='Card-grey';
+--      } else if (el.dataset.status === 'in-progress') {
+--        class_name = 'Card-blue';
+--      } else if (el.dataset.status === 'complete') {
+--        class_name = 'Card-green';
+--      }
+--      if (el.dataset.status !== sibling.dataset.status) {
+--        el.dataset.status = sibling.dataset.status;
+--        const status = sibling.dataset.status;
+--        if (status === 'backlog') {
+--          el.className = el.className.replace(class_name, 'Card-grey');
+--        } else if (status === 'in-progress') {
+--          el.className = el.className.replace(class_name, 'Card-blue');
+--        } else if (status === 'complete') {
+--          el.className = el.className.replace(class_name, 'Card-green');
+--        }
+--      }
+--    })
+--    console.log(this.state.clients)
+--
+--  }
+--  componentDidUpdate(){
+--    dragula(Array.from(document.getElementsByClassName('Swimlane-dragColumn')))
+--    }
+- 
+-   render() {
+-     return (
 diff --git a/src/Board.js b/src/Board.js
-index 7cb5d7b..1f00045 100644
+index 72b51ca..1f00045 100644
 --- a/src/Board.js
 +++ b/src/Board.js
 @@ -1,5 +1,5 @@
@@ -9,40 +87,49 @@ index 7cb5d7b..1f00045 100644
  import 'dragula/dist/dragula.css';
  import Swimlane from './Swimlane';
  import './Board.css';
-@@ -55,36 +55,6 @@ export default class Board extends React.Component {
+@@ -55,45 +55,6 @@ export default class Board extends React.Component {
        <Swimlane name={name} clients={clients} dragulaRef={ref}/>
      );
    }
--  componentDidMount(){
--    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
--    this.drake = dragula(containers)
--    this.drake.on('drop', function (el, target, source, sibling) {
--      let class_name;
--      if (el.dataset.status === 'backlog') {
--        class_name ='Card-grey';
--      } else if (el.dataset.status === 'in-progress') {
--        class_name = 'Card-blue';
--      } else if (el.dataset.status === 'complete') {
--        class_name = 'Card-green';
--      }
--      if (el.dataset.status !== sibling.dataset.status) {
--        el.dataset.status = sibling.dataset.status;
--        const status = sibling.dataset.status;
--        if (status === 'backlog') {
--          el.className = el.className.replace(class_name, 'Card-grey');
--        } else if (status === 'in-progress') {
--          el.className = el.className.replace(class_name, 'Card-blue');
--        } else if (status === 'complete') {
--          el.className = el.className.replace(class_name, 'Card-green');
--        }
+-  updateStates(el, target, source, sibling) {
+-    this.drake.cancel()
+-    // get the new status
+-    let tag = target === this.swimlanes.inProgress.current
+-     ? "in-progress" 
+-     : target === this.swimlanes.complete.current 
+-     ? "complete" : "backlog";
+-    // find the moved card
+-    let list = [...this.state.clients.backlog, ...this.state.clients.inProgress, ...this.state.clients.complete ]
+-    const moved = list.find(card => card.id === el.dataset.id)
+-    moved.status = tag
+-    // remove the moved card
+-    list = list.filter(val => val.id !== moved.id);
+-    // find the card sibling index
+-    const sibIndex = sibling && list.findIndex(card => card.id === sibling.dataset.id);
+-    let index = sibIndex === -1 ? list.length : sibIndex;
+-    // add the card above the sibling
+-    list.splice(index, 0, moved);
+-    this.setState({
+-      clients: {
+-        backlog: list.filter(client => !client.status || client.status === 'backlog'),
+-        inProgress: list.filter(client => client.status && client.status === 'in-progress'),
+-        complete: list.filter(client => client.status && client.status === 'complete'),
 -      }
 -    })
--    console.log(this.state.clients)
+-    
+-  }
+-  componentDidMount(){
+-    const containers = [this.swimlanes.backlog.current, this.swimlanes.inProgress.current, this.swimlanes.complete.current];
+-    this.drake = dragula(containers, {
+-      revertOnSpill: true
+-    })
+-    this.drake.on('drop', (el, target, source, sibling) => this.updateStates(el, target, source, sibling) )
 -
 -  }
--  componentDidUpdate(){
--    dragula(Array.from(document.getElementsByClassName('Swimlane-dragColumn')))
--    }
+-  componentWillUnmount () {
+-    this.drake.destroy()
+-  }
+-  
  
    render() {
      return (
